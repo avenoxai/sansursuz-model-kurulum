@@ -9,6 +9,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIZIN="$HOME/.config/sansursuz"
 ONEK="${SANSURSUZ_ONEK:-}"
+KC="${SANSURSUZ_KEYCHAIN:-}"   # yalnız geliştirme/test: Keychain dosyasını açıkça ver
 TARIH="$(date +%Y%m%d-%H%M%S)"
 KULLANICI="${USER:-$(id -un)}"
 TEST=1
@@ -82,7 +83,7 @@ mkdir -p "$DIZIN"; chmod 700 "$DIZIN"
 sakla() {
   local servis="$1" deger="$2"
   case "$DEPO" in
-    keychain) /usr/bin/security add-generic-password -U -s "${ONEK}sansursuz-$servis" -a "$KULLANICI" -l "sansursuz $servis" -w "$deger" >/dev/null ;;
+    keychain) /usr/bin/security add-generic-password -U -s "${ONEK}sansursuz-$servis" -a "$KULLANICI" -l "sansursuz $servis" -w "$deger" ${KC:+"$KC"} >/dev/null ;;
     secret-tool) printf '%s' "$deger" | secret-tool store --label="sansursuz $servis" uygulama "${ONEK}sansursuz" servis "$servis" ;;
     dosya)
       local f="$DIZIN/anahtarlar"; ( umask 077; touch "$f" )
@@ -97,7 +98,7 @@ cat > "$DIZIN/anahtar" <<EOF
 # Kullanım: anahtar refuseless | anahtar venice  -> anahtarı ekrana değil, çağıran programa verir
 s="\${1:?servis adı ver: refuseless ya da venice}"
 case "$DEPO" in
-  keychain) exec /usr/bin/security find-generic-password -s "${ONEK}sansursuz-\$s" -a "\${USER:-\$(id -un)}" -w ;;
+  keychain) exec /usr/bin/security find-generic-password -s "${ONEK}sansursuz-\$s" -a "\${USER:-\$(id -un)}" -w ${KC:+"$KC"} ;;
   secret-tool) exec secret-tool lookup uygulama "${ONEK}sansursuz" servis "\$s" ;;
   dosya) sed -n "s/^\$s=//p" "\$HOME/.config/sansursuz/anahtarlar" ;;
 esac

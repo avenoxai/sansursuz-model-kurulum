@@ -6,6 +6,7 @@ set -euo pipefail
 DIZIN="$HOME/.config/sansursuz"
 ONEK="${SANSURSUZ_ONEK:-}"
 KULLANICI="${USER:-$(id -un)}"
+KC="${SANSURSUZ_KEYCHAIN:-}"
 tamam() { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 bilgi() { printf '    %s\n' "$*"; }
 
@@ -57,7 +58,7 @@ fi
 
 # Anahtarlar
 for s in refuseless venice; do
-  if [[ "$(uname)" == "Darwin" ]] && /usr/bin/security delete-generic-password -s "${ONEK}sansursuz-$s" -a "$KULLANICI" >/dev/null 2>&1; then
+  if [[ "$(uname)" == "Darwin" ]] && /usr/bin/security delete-generic-password -s "${ONEK}sansursuz-$s" -a "$KULLANICI" ${KC:+"$KC"} >/dev/null 2>&1; then
     tamam "Keychain: $s anahtarı silindi"
   elif command -v secret-tool >/dev/null && secret-tool clear uygulama "${ONEK}sansursuz" servis "$s" 2>/dev/null; then
     tamam "secret-tool: $s anahtarı silindi"
