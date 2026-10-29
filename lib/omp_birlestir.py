@@ -49,12 +49,21 @@ if os.path.exists(dosya) and os.path.getsize(dosya) > 0:
 
 veri.setdefault("providers", {})
 var_olan = [ad for ad in saglayicilar if ad in veri["providers"]]
-veri["providers"].update(saglayicilar)
-eski = os.umask(0o077)
+for ad, yeni in saglayicilar.items():
+    eski = veri["providers"].get(ad)
+    if not isinstance(eski, dict):
+        veri["providers"][ad] = yeni
+        continue
+    # Var olan sağlayıcı: bağlantı alanlarını güncelle, kullanıcının eklediği başka modelleri koru
+    bizim = {m["id"] for m in yeni["models"]}
+    korunan = [m for m in eski.get("models", []) if m.get("id") not in bizim]
+    eski.update({k: v for k, v in yeni.items() if k != "models"})
+    eski["models"] = yeni["models"] + korunan
+maske = os.umask(0o077)
 with open(dosya, "w", encoding="utf-8") as f:
     json.dump(veri, f, indent=2, ensure_ascii=False)
     f.write("\n")
-os.umask(eski)
+os.umask(maske)
 os.chmod(dosya, 0o600)
 ekler = ", ".join(saglayicilar)
 print(f"{ekler} eklendi" + (f" ({', '.join(var_olan)} güncellendi)" if var_olan else ""))
