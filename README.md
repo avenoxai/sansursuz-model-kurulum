@@ -52,6 +52,8 @@ Kaldırmak için: `./kaldir.sh`
 
 Her harness'ta hangi dosyaya ne yazıldığı, hangi alana ne girildiği: [MANUEL.md](MANUEL.md)
 
+Aynısının slayt hali: `sunum/index.html` (tarayıcıda aç, ok tuşlarıyla ilerle).
+
 ## Bir agent'a kurdurmak
 
 Bu repoyu Claude Code, omp ya da Codex ile açıp "bunu kur" diyebilirsin; talimat [AGENTS.md](AGENTS.md)'de. Anahtarı agent'a söyleme: `.env`'yi kendin doldur ya da `./kur.sh`'i kendi terminalinde çalıştır.

@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sansürsüz Modeli Agent'ına Bağlamak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12100d;
+    --bg2: #1a1612;
+    --card: #1f1a15;
+    --card2: #262019;
+    --line: #3a3027;
+    --text: #f3ece0;
+    --muted: #a99c89;
+    --dim: #6f6456;
+    --amber: #f5b041;
+    --coral: #f07a5a;
+    --lime: #cdd36a;
+    --ok: #a8d07a;
+    --bad: #f07a5a;
+    --code: #0e0c0a;
+    --serif: "Fraunces", Georgia, serif;
+    --sans: "Inter", system-ui, -apple-system, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: #0a0907; overflow: hidden; }
+  body { font-family: var(--sans); color: var(--text); -webkit-font-smoothing: antialiased; }
+
+  #stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 1470px; height: 956px;
+    transform-origin: 0 0;
+    background:
+      radial-gradient(1100px 700px at 88% -10%, rgba(245,176,65,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(240,122,90,.07), transparent 60%),
+      var(--bg);
+    overflow: hidden;
+  }
+  #stage::after { /* hafif film grenli doku */
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .05;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    padding: 70px 80px 76px;
+    display: flex; flex-direction: column;
+    opacity: 0; visibility: hidden;
+    transition: opacity .28s ease, visibility 0s linear .28s;
+  }
+  .slide.on { opacity: 1; visibility: visible; transition: opacity .28s ease; }
+
+  /* sayaç ve alt bilgi */
+  #num {
+    position: absolute; right: 34px; bottom: 26px; z-index: 5;
+    font: 500 15px/1 var(--mono); color: var(--dim); letter-spacing: .04em;
+  }
+  #num b { color: var(--amber); font-weight: 500; }
+  #foot {
+    position: absolute; left: 80px; bottom: 26px; z-index: 5;
+    font: 500 14px/1 var(--sans); color: var(--dim); letter-spacing: .02em;
+  }
+  #bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--amber); opacity: .7; transition: width .3s ease; z-index: 5; }
+
+  /* tipografi */
+  .kicker {
+    font: 600 17px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 18px; display: flex; align-items: center; gap: 14px;
+  }
+  .kicker .n {
+    font: 700 15px/1 var(--mono); color: var(--bg); background: var(--amber);
+    border-radius: 6px; padding: 6px 9px; letter-spacing: 0;
+  }
+  h1, h2 { font-family: var(--serif); font-weight: 600; color: var(--text); letter-spacing: -.015em; font-variation-settings: "opsz" 144; }
+  h2 { font-size: 58px; line-height: 1.05; margin-bottom: 26px; }
+  h2 em { font-style: normal; color: var(--amber); }
+  .lead { font-size: 27px; line-height: 1.4; color: var(--muted); max-width: 1100px; }
+  .lead b, .lead strong { color: var(--text); font-weight: 600; }
+  .mono { font-family: var(--mono); }
+
+  /* dosya yolu */
+  .where { display: flex; align-items: center; gap: 16px; margin-bottom: 26px; flex-wrap: wrap; }
+  .where .lbl { font: 600 15px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .path {
+    font: 500 23px/1 var(--mono); color: var(--amber);
+    background: rgba(245,176,65,.09); border: 1.5px solid rgba(245,176,65,.55);
+    padding: 11px 16px; border-radius: 10px; white-space: nowrap;
+  }
+  .where .or { color: var(--muted); font-size: 21px; }
+  .warnpill {
+    font: 600 18px/1 var(--sans); color: var(--coral);
+    border: 1.5px solid rgba(240,122,90,.6); background: rgba(240,122,90,.1);
+    padding: 10px 14px; border-radius: 10px;
+  }
+
+  /* üç bilgi renkleri */
+  .u, .k, .m { border-radius: 5px; padding: 1px 5px; margin: 0 -2px; }
+  .u { color: var(--amber); background: rgba(245,176,65,.15); box-shadow: inset 0 -2px 0 var(--amber); }
+  .k { color: var(--coral); background: rgba(240,122,90,.15); box-shadow: inset 0 -2px 0 var(--coral); }
+  .m { color: var(--lime);  background: rgba(205,211,106,.14); box-shadow: inset 0 -2px 0 var(--lime); }
+  .legend { display: flex; gap: 12px; align-items: center; }
+  .chip { font: 600 17px/1 var(--sans); padding: 9px 13px 9px 11px; border-radius: 8px; display: inline-flex; align-items: center; gap: 9px; }
+  .chip::before { content: ""; width: 11px; height: 11px; border-radius: 3px; background: currentColor; }
+  .chip.u { margin: 0; box-shadow: none; border: 1.5px solid rgba(245,176,65,.5); }
+  .chip.k { margin: 0; box-shadow: none; border: 1.5px solid rgba(240,122,90,.5); }
+  .chip.m { margin: 0; box-shadow: none; border: 1.5px solid rgba(205,211,106,.5); }
+
+  /* kod */
+  .code {
+    background: var(--code); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px 28px; font: 400 20px/1.55 var(--mono); color: #e9e1d3;
+    white-space: pre; position: relative; overflow: hidden;
+  }
+  .code.sm { font-size: 18px; padding: 20px 24px; }
+  .code.xs { font-size: 17px; padding: 18px 22px; }
+  .code .tab {
+    position: absolute; top: 0; right: 0; font: 600 13px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); padding: 10px 14px; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); border-bottom-left-radius: 10px;
+  }
+  .c { color: #74695b; font-style: italic; }
+  .kw { color: #e6a86b; }
+  .key { color: #d9c7a6; }
+  .s { color: #efe6d6; }
+  .fn { color: var(--text); font-weight: 700; }
+  .ok-hl { color: var(--ok); background: rgba(168,208,122,.14); box-shadow: inset 0 -2px 0 var(--ok); border-radius: 5px; padding: 1px 5px; margin: 0 -2px; }
+  .p { color: #8a7e6e; }
+
+  /* tablo */
+  table { border-collapse: separate; border-spacing: 0; width: 100%; }
+  th {
+    text-align: left; font: 600 15px/1 var(--sans); letter-spacing: .13em; text-transform: uppercase;
+    color: var(--dim); padding: 0 20px 14px; border-bottom: 1.5px solid var(--line);
+  }
+  td { padding: 15px 20px; border-bottom: 1px solid #2a231c; font-size: 22px; line-height: 1.35; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td .mono, td code { font-family: var(--mono); font-size: .86em; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 28px;
+  }
+  .card h3 { font: 600 25px/1.2 var(--sans); color: var(--text); margin-bottom: 10px; }
+  .card p { font-size: 21px; line-height: 1.42; color: var(--muted); }
+  .card p b { color: var(--text); font-weight: 600; }
+  .note { font-size: 20px; color: var(--muted); line-height: 1.4; }
+  .note b { color: var(--text); font-weight: 600; }
+  code.i { font: 500 .88em var(--mono); color: var(--text); background: #2a231c; border-radius: 6px; padding: 2px 8px; }
+
+  .grow { flex: 1; min-height: 0; }
+
+  /* 1 başlık */
+  .title-slide { justify-content: center; padding-left: 110px; }
+  .title-slide .kicker { margin-bottom: 30px; }
+  .title-slide h1 { font-size: 112px; line-height: .98; max-width: 1150px; margin-bottom: 44px; }
+  .title-slide h1 em { font-style: normal; color: var(--amber); }
+  .harnesses { display: flex; gap: 14px; flex-wrap: wrap; }
+  .harnesses span {
+    font: 500 26px/1 var(--sans); color: var(--text); padding: 15px 22px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--line);
+  }
+  .harnesses span.b { color: var(--muted); border-style: dashed; }
+  .harnesses span.b i { font-style: normal; font: 600 13px/1 var(--sans); letter-spacing: .12em; color: var(--amber); margin-left: 10px; vertical-align: 3px; }
+  .title-deco { position: absolute; right: 90px; top: 90px; display: flex; flex-direction: column; gap: 12px; align-items: flex-end; }
+  .title-deco div { height: 12px; border-radius: 6px; }
+
+  /* 2 üç bilgi */
+  .three th:first-child, .three td:first-child { width: 230px; }
+  .three td:first-child { font-weight: 600; }
+  .three .model-list { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .three td { font-size: 25px; padding: 26px 20px; }
+  .three td .mono { font-size: 21px; }
+  .three .fmt { font-size: 23px; color: var(--muted); }
+  .three .fmt b { color: var(--text); }
+
+  /* 3 format */
+  .flow { display: grid; grid-template-columns: 330px 70px 300px 70px 1fr; align-items: center; row-gap: 48px; margin-top: 30px; }
+  .node { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 26px 28px; font-size: 29px; font-weight: 600; line-height: 1.25; }
+  .node small { display: block; font: 500 17px/1.3 var(--sans); color: var(--muted); margin-top: 6px; }
+  .fmtbox { border-radius: 14px; padding: 22px 22px; text-align: center; font: 600 27px/1.2 var(--sans); padding: 28px 22px; }
+  .fmtbox small { display: block; font: 500 16px/1.3 var(--mono); margin-top: 6px; opacity: .8; }
+  .fmt-a { background: rgba(240,122,90,.12); border: 1.5px solid rgba(240,122,90,.6); color: var(--coral); }
+  .fmt-o { background: rgba(245,176,65,.10); border: 1.5px solid rgba(245,176,65,.55); color: var(--amber); }
+  .arrow { height: 2px; background: var(--dim); position: relative; margin: 0 10px; }
+  .arrow::after { content: ""; position: absolute; right: -2px; top: -6px; border: 7px solid transparent; border-left: 10px solid var(--dim); border-right: 0; }
+  .dests { display: flex; flex-direction: column; gap: 12px; }
+  .dest { display: flex; align-items: center; gap: 14px; font-size: 27px; font-weight: 600; padding: 18px 20px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+  .dest .yes, .dest .no { font: 700 22px/1 var(--mono); width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+  .dest .yes { background: rgba(168,208,122,.15); color: var(--ok); }
+  .dest .no { background: rgba(240,122,90,.15); color: var(--bad); }
+  .dest small { font: 500 18px/1.3 var(--sans); color: var(--muted); margin-left: auto; text-align: right; }
+  .dest.off { opacity: .85; border-style: dashed; }
+
+  /* 4 fiyat */
+  .price td { font-size: 22px; padding: 14px 18px; vertical-align: middle; }
+  .price th { padding-left: 18px; padding-right: 18px; }
+  .price td.num, .price th.num { text-align: right; font-family: var(--mono); }
+  .price td.num { font-size: 25px; font-weight: 500; }
+  .price .prov { font: 600 15px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; padding: 7px 10px; border-radius: 7px; display: inline-block; }
+  .price .r { color: var(--amber); background: rgba(245,176,65,.12); }
+  .price .v { color: #d7b98c; background: rgba(215,185,140,.12); }
+  .price .spec { color: var(--muted); font-family: var(--mono); font-size: 19px; }
+  .price .old { display: block; font-size: 15px; color: var(--dim); text-decoration: line-through; margin-top: 4px; }
+  .price .disc { font: 700 14px/1 var(--sans); color: var(--bg); background: var(--amber); padding: 5px 8px; border-radius: 6px; margin-left: 10px; vertical-align: 3px; letter-spacing: .03em; }
+  .price tr.hl td { background: rgba(245,176,65,.05); }
+  .price .na { color: var(--dim); }
+  .compare {
+    margin-top: 22px; display: flex; align-items: center; gap: 22px; padding: 18px 24px; border-radius: 14px;
+    border: 1.5px dashed var(--line); background: rgba(255,255,255,.015);
+  }
+  .compare .big { font: 500 28px/1 var(--mono); color: var(--ok); white-space: nowrap; }
+  .compare p { font-size: 20px; color: var(--muted); line-height: 1.35; }
+  .compare p b { color: var(--text); }
+
+  /* 6 claude */
+  .bottomline { margin-top: 22px; display: flex; gap: 18px; align-items: center; font-size: 22px; color: var(--muted); }
+  .bottomline b { color: var(--text); }
+
+  .vars td { font-size: 20px; padding: 12px 18px; color: var(--muted); }
+  .vars td:first-child { width: 445px; font: 500 17px/1.35 var(--mono); color: var(--text); }
+  .vars tr.hl td { background: rgba(245,176,65,.07); }
+  .vars tr.hl td:first-child { color: var(--amber); }
+
+  .side-list { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .side-list li { font-size: 21px; color: var(--text); display: flex; gap: 12px; align-items: baseline; }
+  .side-list li::before { content: ""; width: 9px; height: 9px; border-radius: 2px; background: var(--amber); flex: none; transform: translateY(-2px); }
+
+  /* 11 akış */
+  .cmds { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 36px; }
+  .cmds .cmd:first-child { grid-column: 1 / -1; }
+  .cmd { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; }
+  .cmd .st { font: 600 14px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 12px; }
+  .cmd .ln { font: 500 25px/1.4 var(--mono); color: var(--text); white-space: nowrap; }
+  .cmd .ln .p { color: var(--amber); }
+  .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; margin-top: 24px; }
+  .step { position: relative; padding: 0 14px 0 0; }
+  .step .dot {
+    width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center;
+    font: 700 27px/1 var(--mono); color: var(--bg); background: var(--amber); position: relative; z-index: 2; margin-bottom: 18px;
+  }
+  .step::before { content: ""; position: absolute; left: 66px; right: 0; top: 32px; height: 2px; background: linear-gradient(90deg, var(--amber), rgba(245,176,65,.2)); }
+  .step:last-child::before { display: none; }
+  .step h4 { font: 600 28px/1.2 var(--sans); margin-bottom: 10px; color: var(--text); padding-right: 8px; }
+  .step p { font-size: 21px; line-height: 1.45; color: var(--muted); padding-right: 10px; }
+  .step p code { font: 500 17px var(--mono); color: var(--text); background: #2a231c; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+
+  /* 12 takıldığın yerler */
+  .trouble td { font-size: 22px; padding: 17px 16px; color: var(--muted); vertical-align: middle; }
+  .trouble td:first-child { color: var(--text); font-weight: 500; width: 380px; }
+  .trouble td:first-child code { font: 500 18.5px var(--mono); color: var(--coral); }
+  .trouble td:last-child { color: var(--text); }
+  .trouble td code { font: 500 18px var(--mono); color: var(--text); background: #2a231c; padding: 1px 7px; border-radius: 5px; }
+  .trouble th { padding-left: 16px; padding-right: 16px; }
+
+  /* 13 son */
+  .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 8px; }
+  .rule { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 40px 34px 34px; display: flex; flex-direction: column; min-height: 600px; }
+  .rule .no { font: 600 80px/1 var(--serif); color: var(--amber); margin-bottom: 22px; }
+  .rule h3 { font: 600 33px/1.18 var(--sans); margin-bottom: 16px; }
+  .rule p { font-size: 24px; line-height: 1.45; color: var(--muted); }
+  .rule p b { color: var(--text); font-weight: 600; }
+  .rule .codeline { margin-top: auto; padding-top: 22px; }
+  .rule .codeline span { white-space: nowrap; font: 500 19px var(--mono); color: var(--amber); background: var(--code); border: 1px solid var(--line); border-radius: 9px; padding: 10px 13px; display: inline-block; }
+  .pricepair { margin-top: auto; padding-top: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .pricepair div { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; font-size: 18px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+  .pricepair div span:last-child { font: 500 22px var(--mono); color: var(--text); white-space: nowrap; }
+  .pricepair div span:first-child { white-space: nowrap; }
+  .pricepair div.g span:last-child { color: var(--ok); }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1 -->
+  <section class="slide title-slide">
+    <div class="title-deco">
+      <div style="width:220px;background:var(--amber)"></div>
+      <div style="width:150px;background:var(--coral)"></div>
+      <div style="width:90px;background:var(--lime)"></div>
+    </div>
+    <div class="kicker">Kurulum rehberi</div>
+    <h1>Sansürsüz Modeli <em>Agent'ına</em> Bağlamak</h1>
+    <div class="harnesses">
+      <span>Claude Code</span>
+      <span>omp</span>
+      <span>DeepSeek Harness</span>
+      <span class="b">OpenCode<i>BONUS</i></span>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide">
+    <div class="kicker">Temel fikir</div>
+    <h2>Her harness'ta aynı <em>üç bilgi</em></h2>
+    <div class="legend" style="margin-bottom:26px">
+      <span class="chip u">Adres</span><span class="chip k">Anahtar</span><span class="chip m">Model adı</span>
+      <span class="note" style="margin-left:12px">Sonraki slaytlarda bu üç renk nereye yazıldığını gösterir.</span>
+    </div>
+    <table class="three">
+      <tr><th>Bilgi</th><th lang="en">Refuseless</th><th lang="en">Venice</th></tr>
+      <tr>
+        <td>Adres <span class="note" style="font-size:16px;display:block;font-weight:400">base URL</span></td>
+        <td><span class="mono u">https://api.refuseless.com/v1</span></td>
+        <td><span class="mono u">https://api.venice.ai/api/v1</span></td>
+      </tr>
+      <tr>
+        <td>Anahtar</td>
+        <td><span class="k">panel &gt; API Keys</span></td>
+        <td><span class="k">Settings &gt; API Keys</span></td>
+      </tr>
+      <tr>
+        <td>Model adı</td>
+        <td><div class="model-list">
+          <span class="mono m">deepseek-v4.1-flash-abliterated</span>
+          <span class="mono m">glm-5.3-flash-abliterated</span>
+          <span class="mono m">glm-5.3-abliterated</span></div></td>
+        <td><div class="model-list">
+          <span class="mono m">deepseek-v4-1-flash-uncensored</span>
+          <span class="mono m">abliteration-abliterated-model-large-v2</span></div></td>
+      </tr>
+      <tr>
+        <td>API formatı</td>
+        <td class="fmt"><b>OpenAI uyumlu</b> ve <b>Anthropic uyumlu</b></td>
+        <td class="fmt">yalnız <b>OpenAI uyumlu</b></td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide">
+    <div class="kicker">Fark yaratan tek şey</div>
+    <h2>API formatı: <em>kim hangi dili konuşuyor</em></h2>
+    <div class="flow">
+      <div class="node">Claude Code</div>
+      <div class="arrow"></div>
+      <div class="fmtbox fmt-a">Anthropic formatı</div>
+      <div class="arrow"></div>
+      <div class="dests">
+        <div class="dest"><span class="yes">✓</span>Refuseless<small>doğrudan bağlanır</small></div>
+        <div class="dest off"><span class="no">✕</span>Venice<small>arada çevirici (proxy) lazım<br>bu repo onu kurmaz</small></div>
+      </div>
+
+      <div class="node">omp<br>DeepSeek Harness<br>OpenCode</div>
+      <div class="arrow"></div>
+      <div class="fmtbox fmt-o">OpenAI formatı<small>openai-completions</small></div>
+      <div class="arrow"></div>
+      <div class="dests">
+        <div class="dest"><span class="yes">✓</span>Refuseless</div>
+        <div class="dest"><span class="yes">✓</span>Venice</div>
+      </div>
+    </div>
+    <div class="bottomline" style="margin-top:56px;font-size:24px">
+      <span class="warnpill">Claude Code'da 404</span>
+      <span>Sağlayıcı Anthropic formatını desteklemiyor demek. <b>Refuseless kullan</b> ya da proxy kur.</span>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide">
+    <div class="kicker">Fiyatlar</div>
+    <h2>Ne kadar tutuyor?</h2>
+    <table class="price">
+      <tr><th>Model</th><th>Sağlayıcı</th><th class="num">Girdi</th><th class="num">Çıktı</th><th class="num">Hız</th><th>Hassasiyet</th></tr>
+      <tr>
+        <td>GLM 5.3 Flash Abliterated</td><td><span class="prov r">Refuseless</span></td>
+        <td class="num">0,12</td><td class="num">0,50</td><td class="num spec">130 tok/s</td><td class="spec">NVFP4</td>
+      </tr>
+      <tr class="hl">
+        <td>DeepSeek V4.1 Flash Abliterated<span class="disc">%36 İNDİRİM</span></td><td><span class="prov r">Refuseless</span></td>
+        <td class="num">0,14<span class="old">0,22</span></td><td class="num">0,50<span class="old">0,75</span></td><td class="num spec">178 tok/s</td><td class="spec">FP8</td>
+      </tr>
+      <tr>
+        <td>GLM 5.3 Abliterated</td><td><span class="prov r">Refuseless</span></td>
+        <td class="num">1</td><td class="num">2</td><td class="num spec">85 tok/s</td><td class="spec">NVFP4</td>
+      </tr>
+      <tr>
+        <td>DeepSeek V4.1 Flash Uncensored</td><td><span class="prov v" lang="en">Venice</span></td>
+        <td class="num">0,33</td><td class="num">1,32</td><td class="num spec na">-</td><td class="spec na">-</td>
+      </tr>
+      <tr>
+        <td>Abliterated Large V2</td><td><span class="prov v" lang="en">Venice</span></td>
+        <td class="num">3</td><td class="num">5</td><td class="num spec na">-</td><td class="spec na">-</td>
+      </tr>
+    </table>
+    <div class="compare">
+      <span class="big">0,05 / 0,15</span>
+      <p>Aynı DeepSeek'in <b>sansürsüz olmayan</b> hali, Refuseless'te. <b>280 tok/s.</b></p>
+    </div>
+    <div class="note" style="margin-top:18px">USD / 1 milyon token, girdi / çıktı. <b>29 Ekim 2026 itibarıyla.</b> Refuseless'te hepsinin bağlamı 1M.</div>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide">
+    <div class="kicker"><span class="n">0</span>Önce bu</div>
+    <h2>Anahtar dosyaya değil, <em>güvenli depoya</em></h2>
+    <div class="where"><span class="lbl">macOS</span><span class="path">Keychain</span></div>
+    <div class="code"><span class="tab">kaydet</span><span class="p">$</span> security add-generic-password -U -s <span class="k">sansursuz-refuseless</span> -a <span class="s">"$USER"</span> -w</div>
+    <div class="note" style="margin:12px 0 22px">Komut anahtarı sorar, <b>ekranda görünmez.</b> Venice için servis adı <code class="i">sansursuz-venice</code>.</div>
+    <div class="code sm"><span class="tab">oku</span><span class="p">$</span> security find-generic-password -s <span class="k">sansursuz-refuseless</span> -a <span class="s">"$USER"</span> -w</div>
+    <div class="where" style="margin:30px 0 14px"><span class="lbl">Linux</span><span class="path">secret-tool</span></div>
+    <div class="code sm"><span class="p">$</span> secret-tool store --label=<span class="s">"sansursuz refuseless"</span> uygulama sansursuz servis <span class="k">refuseless</span></div>
+    <div class="bottomline"><span>Bundan sonraki her örnekte anahtar bu depodan okunuyor. <b>Hiçbir ayar dosyasında anahtarın kendisi yok.</b></span></div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide">
+    <div class="kicker"><span class="n">1</span>Claude Code</div>
+    <h2>Ayar dosyası yok, <em>kabuk fonksiyonu</em> var</h2>
+    <div class="where">
+      <span class="lbl">Nerede</span><span class="path">~/.zshrc</span><span class="or">ya da</span><span class="path">~/.bashrc</span>
+      <span class="legend" style="margin-left:auto"><span class="chip u">Adres</span><span class="chip k">Anahtar</span><span class="chip m">Model</span></span>
+    </div>
+<div class="code"><span class="fn">claude-sansursuz</span>() {
+  ANTHROPIC_BASE_URL=<span class="u">"https://api.refuseless.com"</span> \
+  ANTHROPIC_AUTH_TOKEN=<span class="k">"$(security find-generic-password -s sansursuz-refuseless -a "$USER" -w)"</span> \
+  ANTHROPIC_MODEL=<span class="m">"deepseek-v4.1-flash-abliterated"</span> \
+  ANTHROPIC_DEFAULT_OPUS_MODEL=<span class="m">"glm-5.3-abliterated"</span> \
+  ANTHROPIC_DEFAULT_SONNET_MODEL=<span class="m">"deepseek-v4.1-flash-abliterated"</span> \
+  ANTHROPIC_DEFAULT_HAIKU_MODEL=<span class="m">"glm-5.3-flash-abliterated"</span> \
+  CLAUDE_CODE_SUBAGENT_MODEL=<span class="m">"deepseek-v4.1-flash-abliterated"</span> \
+  CLAUDE_CODE_AUTO_COMPACT_WINDOW=1000000 \
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
+  CLAUDE_CONFIG_DIR=<span class="s">"$HOME/.claude-sansursuz"</span> \
+  <span class="kw">command</span> claude <span class="s">"$@"</span>
+}</div>
+    <div class="bottomline">
+      <span>Kullanım: <code class="i">claude-sansursuz</code></span>
+      <span style="color:var(--dim)">·</span>
+      <span>Normal <code class="i">claude</code> komutu <b>hiç değişmez.</b></span>
+      <span style="color:var(--dim)">·</span>
+      <span>Adresin sonuna <code class="i">/v1</code> koyma.</span>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide">
+    <div class="kicker"><span class="n">1</span>Claude Code</div>
+    <h2>Hangi değişken <em>ne işe yarıyor</em></h2>
+    <div style="display:grid;grid-template-columns:1fr 400px;gap:34px;align-items:start">
+      <table class="vars">
+        <tr><th>Değişken</th><th>Ne işe yarar</th></tr>
+        <tr><td><span class="u">ANTHROPIC_BASE_URL</span></td><td>Adres. Sonuna <code class="i">/v1</code> koyma, Claude Code kendisi ekliyor.</td></tr>
+        <tr><td><span class="k">ANTHROPIC_AUTH_TOKEN</span></td><td>Anahtar.</td></tr>
+        <tr><td><span class="m">ANTHROPIC_MODEL</span></td><td>Açılışta kullanılan model.</td></tr>
+        <tr><td><span class="m">ANTHROPIC_DEFAULT_OPUS/<br>SONNET/HAIKU_MODEL</span></td><td><code class="i">/model</code> menüsündeki Opus, Sonnet, Haiku hangi modele gitsin.</td></tr>
+        <tr><td><span class="m">CLAUDE_CODE_SUBAGENT_MODEL</span></td><td>Alt ajanların modeli.</td></tr>
+        <tr><td>CLAUDE_CODE_AUTO_<br>COMPACT_WINDOW</td><td>Bu modelleri tanımadığı için bağlamı 200K sanıyor; 1 milyon olduğunu söylüyoruz.</td></tr>
+        <tr class="hl"><td>CLAUDE_CONFIG_DIR</td><td>Ayrı ayar klasörü.</td></tr>
+      </table>
+      <div class="card" style="border-color:rgba(245,176,65,.5)">
+        <h3>Neden ayrı klasör?</h3>
+        <p>Bu sağlayıcıya <b>gitmeyenler:</b></p>
+        <ul class="side-list">
+          <li>Asıl Claude girişin</li>
+          <li>CLAUDE.md'n</li>
+          <li>Hafızan</li>
+          <li>Hook ve MCP'lerin</li>
+        </ul>
+        <p style="margin-top:20px;font-size:18px">İlk açılışta tema ve klasör güveni sorar; ayrı klasör olduğu için normal.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide">
+    <div class="kicker"><span class="n">2</span><span lang="en">omp (Oh My Pi)</span></div>
+    <h2>Bir YAML dosyası, <em>bir sağlayıcı bloğu</em></h2>
+    <div class="where">
+      <span class="lbl">Nerede</span><span class="path">~/.omp/agent/models.yml</span>
+      <span class="note">JSON da yazabilirsin, JSON geçerli YAML'dır.</span>
+    </div>
+<div class="code xs" style="margin-bottom:18px"><span class="key">providers</span>:
+  <span class="key">refuseless</span>:
+    <span class="key">baseUrl</span>: <span class="u">https://api.refuseless.com/v1</span>
+    <span class="key">api</span>: openai-completions
+    <span class="key">apiKey</span>: <span class="k">"!security find-generic-password -s sansursuz-refuseless -a $USER -w"</span>
+    <span class="key">models</span>:
+      - <span class="key">id</span>: <span class="m">deepseek-v4.1-flash-abliterated</span>
+        <span class="key">name</span>: DeepSeek V4.1 Flash Abliterated
+        <span class="key">contextWindow</span>: 1048576
+        <span class="key">maxTokens</span>: 131072
+      <span class="c"># glm-5.3-flash-abliterated ve glm-5.3-abliterated aynı şekilde</span>
+  <span class="key">venice</span>: <span class="c"># aynı yapı: baseUrl https://api.venice.ai/api/v1, anahtar sansursuz-venice</span></div>
+    <div style="display:grid;grid-template-columns:540px 1fr;gap:22px;align-items:start">
+      <div class="card" style="padding:20px 24px">
+        <h3 style="font-size:22px"><span class="k" style="font-family:var(--mono);font-size:19px">apiKey</span> üç şekilde yazılır</h3>
+        <p style="font-size:19px;margin-top:6px"><b>1.</b> <code class="i">!komut</code> çıktısı anahtar olur. <b style="color:var(--ok)">Önerilen.</b></p>
+        <p style="font-size:19px;margin-top:6px"><b>2.</b> Bir ortam değişkeninin adı.</p>
+        <p style="font-size:19px;margin-top:6px"><b>3.</b> Anahtarın kendisi. <b style="color:var(--coral)">Önerilmez.</b></p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+<div class="code xs" style="font-size:16.5px;padding:14px 20px"><span class="fn">omp-sansursuz</span>() {
+  <span class="kw">command</span> omp --model <span class="m">refuseless/deepseek-v4.1-flash-abliterated</span> \
+    <span class="ok-hl">--approval-mode always-ask</span> <span class="s">"$@"</span>
+}</div>
+        <p class="note" style="font-size:18px"><b>always-ask</b> her araç çağrısında onay sorar. Bu modellere bilgisayarına erişim veriyorsun; onayı kapatma.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide">
+    <div class="kicker"><span class="n">3</span>DeepSeek Harness</div>
+    <h2>Uygulamadan ya da <em>patch dosyasından</em></h2>
+    <div style="display:grid;grid-template-columns:560px 1fr;gap:30px;align-items:start">
+      <div>
+        <div class="where" style="margin-bottom:16px"><span class="lbl">Yol A</span><span class="path" style="font-size:20px">Ayarlar &gt; Models &gt; yeni sağlayıcı</span></div>
+        <table class="vars" style="margin-top:4px">
+          <tr><th>Alan</th><th>Değer</th></tr>
+          <tr><td style="width:150px;font-family:var(--sans);font-size:19px">API tipi</td><td style="font-size:18px">OpenAI completions</td></tr>
+          <tr><td style="width:150px;font-family:var(--sans);font-size:19px">Base URL</td><td><span class="mono u" style="font-size:16.5px">https://api.refuseless.com/v1</span></td></tr>
+          <tr><td style="width:150px;font-family:var(--sans);font-size:19px">API key</td><td style="font-size:18px"><span class="k">&lt;ANAHTARIN&gt;</span> uygulama kendi deposunda saklar</td></tr>
+          <tr><td style="width:150px;font-family:var(--sans);font-size:19px">Modeller</td><td><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;font-family:var(--mono);font-size:16px"><span class="m">deepseek-v4.1-flash-abliterated</span><span class="m">glm-5.3-flash-abliterated</span><span class="m">glm-5.3-abliterated</span></div></td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="where" style="margin-bottom:16px"><span class="lbl">Yol B</span><span class="path" style="font-size:18px">~/.dsh/profiles/desktop/cordis.patch.yml</span></div>
+<div class="code xs" style="font-size:16.5px">- <span class="key">id</span>: llm-pi-ai
+  <span class="key">name</span>: <span class="s">"@deepseek-ai/dsh-llm-pi-ai"</span>
+  <span class="key">config</span>:
+    <span class="key">providers</span>:
+      <span class="key">refuseless</span>:
+        <span class="key">displayName</span>: Refuseless
+        <span class="key">apiKeyEnv</span>: <span class="k">REFUSELESS_API_KEY</span>
+        <span class="key">api</span>: openai-completions
+        <span class="key">baseURL</span>: <span class="u">https://api.refuseless.com/v1</span>
+        <span class="key">models</span>:
+          - <span class="key">id</span>: <span class="m">deepseek-v4.1-flash-abliterated</span>
+            <span class="key">name</span>: deepseek-v4.1-flash-abliterated
+            <span class="key">contextWindow</span>: 1048576</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:22px;align-items:stretch">
+      <div class="card" style="flex:1;padding:18px 22px;border-color:rgba(240,122,90,.5)">
+        <p style="font-size:19px"><b>Dosya adı <code class="i">cordis.patch.yml</code></b>, <code class="i">cordis.yml</code> değil. Değiştirdikten sonra <b>uygulamayı yeniden başlat.</b></p>
+      </div>
+      <div class="card" style="flex:1.25;padding:18px 22px">
+        <p style="font-size:19px"><span class="k" style="font-family:var(--mono);font-size:17px">apiKeyEnv</span> anahtarın kendisi değil, <b>adı.</b> Değeri uygulamaya bir kez girersin; önce kendi deposunda, sonra ortam değişkeninde arar.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide">
+    <div class="kicker"><span class="n">4</span>OpenCode <span style="color:var(--dim);letter-spacing:.12em">bonus</span></div>
+    <h2>Kendi ayarına dokunmadan, <em>ayrı dosya</em></h2>
+    <div class="where">
+      <span class="lbl">Nerede</span><span class="path" style="font-size:20px">~/.config/opencode/opencode.json</span><span class="or">ya da</span><span class="path" style="font-size:20px">ayrı dosya + OPENCODE_CONFIG</span>
+    </div>
+    <div style="display:grid;grid-template-columns:600px 1fr;gap:26px;align-items:start">
+<div class="code xs" style="font-size:16px;line-height:1.5"><span class="p">{</span>
+  <span class="key">"$schema"</span>: <span class="s">"https://opencode.ai/config.json"</span>,
+  <span class="key">"provider"</span>: {
+    <span class="key">"refuseless"</span>: {
+      <span class="key">"npm"</span>: <span class="s">"@ai-sdk/openai-compatible"</span>,
+      <span class="key">"name"</span>: <span class="s">"Refuseless"</span>,
+      <span class="key">"options"</span>: {
+        <span class="key">"baseURL"</span>: <span class="u">"https://api.refuseless.com/v1"</span>,
+        <span class="key">"apiKey"</span>: <span class="k">"{env:REFUSELESS_API_KEY}"</span>
+      },
+      <span class="key">"models"</span>: {
+        <span class="m">"deepseek-v4.1-flash-abliterated"</span>: {
+          <span class="key">"name"</span>: <span class="s">"DeepSeek V4.1 Flash Abliterated"</span>,
+          <span class="key">"tool_call"</span>: true
+        }
+      }
+    }
+  }
+<span class="p">}</span></div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <p class="note" style="font-size:20px"><span class="k" style="font-family:var(--mono);font-size:18px">{env:...}</span> anahtarı ortam değişkeninden okur. Değişkeni <b>yalnız OpenCode açılırken</b> ver:</p>
+<div class="code xs" style="font-size:15.5px;padding:16px 18px"><span class="fn">opencode-sansursuz</span>() {
+  OPENCODE_CONFIG=<span class="s">"$HOME/.config/sansursuz/opencode.json"</span> \
+  REFUSELESS_API_KEY=<span class="k">"$(security find-generic-password \</span>
+    <span class="k">-s sansursuz-refuseless -a "$USER" -w)"</span> \
+  <span class="kw">command</span> opencode <span class="s">"$@"</span>
+}</div>
+        <div class="card" style="padding:18px 22px">
+          <p style="font-size:19px"><b>Venice</b> OpenCode'un hazır kataloğunda zaten var. <b>Refuseless</b> yok, o yüzden elle tanımlanıyor.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide">
+    <div class="kicker">Kısa yol</div>
+    <h2>Hepsini <em>tek komut</em> yapar</h2>
+    <div class="cmds">
+      <div class="cmd"><div class="st">1. İndir</div><div class="ln"><span class="p">$</span> git clone <span class="u">https://github.com/avenoxai/sansursuz-model-kurulum.git</span></div></div>
+      <div class="cmd"><div class="st">2. Anahtarı yaz</div><div class="ln"><span class="p">$</span> cp .env.example <span class="k">.env</span></div></div>
+      <div class="cmd" style="border-color:rgba(245,176,65,.6)"><div class="st">3. Çalıştır</div><div class="ln"><span class="p">$</span> ./kur.sh</div></div>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="dot">1</div><h4>Anahtarlar doğrulanır</h4><p>Yanlış anahtar kaydedilmeden yakalanır.</p></div>
+      <div class="step"><div class="dot">2</div><h4>Güvenli depoya konur</h4><p>Keychain ya da secret-tool. <code>.env</code> içindeki değerler silinir.</p></div>
+      <div class="step"><div class="dot">3</div><h4>Harness'lar ayarlanır</h4><p>Kurulu olanlar: <code>models.yml</code>, <code>opencode.json</code>, <code>cordis.patch.yml</code>, kabuk fonksiyonları.</p></div>
+      <div class="step"><div class="dot">4</div><h4>Kabuk bloğu</h4><p><code>~/.zshrc</code> içine tek blok, önce yedek alınır.</p></div>
+      <div class="step"><div class="dot">5</div><h4>Tek kelimelik deneme</h4><p>Her harness'a "merhaba" dedirtir.</p></div>
+    </div>
+    <div class="bottomline" style="margin-top:auto;font-size:23px">
+      <span><code class="i">./kur.sh --test-yok</code> denemeyi atlar</span>
+      <span style="color:var(--dim)">·</span>
+      <span><code class="i">./kaldir.sh</code> hepsini geri alır</span>
+      <span style="color:var(--dim)">·</span>
+      <span>Bitince yeni terminal aç</span>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide">
+    <div class="kicker">Sorun giderme</div>
+    <h2>Takıldığın yerler</h2>
+    <table class="trouble">
+      <tr><th>Belirti</th><th>Sebep</th><th>Çözüm</th></tr>
+      <tr><td>omp: <code>No API key found</code></td><td>İlk çağrılar paralel atıldı, Keychain okuması zaman aşımına düştü</td><td>İlk çağrıyı tek başına at</td></tr>
+      <tr><td><code>omp -p</code> asılı kalıyor</td><td>Betikten çağırırken stdin açık</td><td>Sonuna <code>&lt; /dev/null</code> ekle</td></tr>
+      <tr><td>Claude Code: <code>doesn't recognize the model</code></td><td>Model adı Claude Code'un listesinde yok</td><td><code>CLAUDE_CODE_AUTO_COMPACT_WINDOW</code> ver (uyarı zararsız)</td></tr>
+      <tr><td>Claude Code'da <code>404</code></td><td>Sağlayıcı Anthropic formatını desteklemiyor (Venice)</td><td>Refuseless kullan ya da proxy kur</td></tr>
+      <tr><td>OpenCode: <code>Authentication required</code></td><td>Anahtar ortam değişkeni boş</td><td><code>opencode-sansursuz</code> ile aç</td></tr>
+      <tr><td><code>503</code> ya da <code>429</code></td><td>Sağlayıcı yoğun</td><td>Sıralı çalıştır, tekrar dene; model bozuk değil</td></tr>
+    </table>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide">
+    <div class="kicker">Son söz</div>
+    <h2>Kullanmadan önce</h2>
+    <div class="rules">
+      <div class="rule">
+        <div class="no">01</div>
+        <h3>Araç çağrılarını onaya bağla</h3>
+        <p>Bu modellere <b>bilgisayarına erişim</b> veriyorsun. Her araç çağrısında onay sorsun; onayı kapatma.</p>
+        <div class="codeline"><span>--approval-mode always-ask</span></div>
+      </div>
+      <div class="rule">
+        <div class="no">02</div>
+        <h3>Küçük parayla dene</h3>
+        <p>Önce ucuz bir modelle tek kelimelik denemeyi geç, sonra büyüt. <span style="font-size:18px;color:var(--dim)">(sansürsüz, $ / 1M token)</span></p>
+        <div class="pricepair">
+          <div><span>GLM 5.3 Flash</span><span>0,12 / 0,50</span></div>
+          <div><span>DeepSeek V4.1 Flash</span><span>0,14 / 0,50</span></div>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="no">03</div>
+        <h3>İhtiyacın yoksa normal model yeter</h3>
+        <p>Aynı DeepSeek, sansürsüz olmayan hali <b>daha ucuz ve daha hızlı.</b></p>
+        <div class="pricepair">
+          <div><span>Sansürsüz, 178 tok/s</span><span>0,14 / 0,50</span></div>
+          <div class="g"><span>Normal, 280 tok/s</span><span>0,05 / 0,15</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="foot">Sansürsüz modeli agent'ına bağlamak</div>
+  <div id="num"></div>
+  <div id="bar"></div>
+</div>
+
+<script>
+(() => {
+  const stage = document.getElementById('stage');
+  const slides = [...document.querySelectorAll('.slide')];
+  const num = document.getElementById('num');
+  const bar = document.getElementById('bar');
+  const W = 1470, H = 956;
+  let i = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / W, innerHeight / H);
+    stage.style.transform = `translate(${-W * s / 2}px, ${-H * s / 2}px) scale(${s})`;
+  }
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((el, k) => el.classList.toggle('on', k === i));
+    num.innerHTML = `<b>${pad(i + 1)}</b> / ${pad(slides.length)}`;
+    bar.style.width = `${((i + 1) / slides.length) * 100}%`;
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+  addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || (k === ' ' && !e.shiftKey) || k === 'Enter') { e.preventDefault(); go(i + 1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || (k === ' ' && e.shiftKey) || k === 'Backspace') { e.preventDefault(); go(i - 1); }
+    else if (k === 'Home') { e.preventDefault(); go(0); }
+    else if (k === 'End') { e.preventDefault(); go(slides.length - 1); }
+    else if (k === 'f' || k === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
+    }
+  });
+  addEventListener('click', e => { if (e.clientX > innerWidth * 0.5) go(i + 1); else go(i - 1); });
+  addEventListener('resize', fit);
+  if ('ResizeObserver' in window) new ResizeObserver(fit).observe(document.documentElement);
+  if (window.visualViewport) visualViewport.addEventListener('resize', fit);
+  addEventListener('hashchange', () => { const h = parseInt(location.hash.slice(1), 10); if (h && h - 1 !== i) go(h - 1); });
+  fit();
+  const h0 = parseInt(location.hash.slice(1), 10);
+  go(h0 ? h0 - 1 : 0);
+})();
+</script>
+</body>
+</html>
