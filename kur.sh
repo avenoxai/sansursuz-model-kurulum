@@ -267,7 +267,7 @@ if [[ $TEST == 1 ]]; then
 fi
 
 baslik "Bitti"
-bilgi "Yeni bir terminal aç (ya da: source ~/.zshrc). Komutlar:"
+bilgi "Yeni bir terminal aç (ya da: source ~/.zshrc / source ~/.bashrc). Komutlar:"
 for h in ${SONUC[@]+"${SONUC[@]}"}; do
   case "$h" in
     claude) bilgi "  claude-sansursuz" ;;

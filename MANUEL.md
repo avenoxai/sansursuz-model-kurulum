@@ -25,6 +25,8 @@ Komut anahtarı sorar, ekranda görünmez. Okumak için: `security find-generic-
 
 Linux: `secret-tool store --label="sansursuz refuseless" uygulama sansursuz servis refuseless`
 
+Windows (PowerShell): `Read-Host -AsSecureString | ConvertFrom-SecureString | Set-Content $HOME\.config\sansursuz\refuseless.anahtar` (DPAPI ile şifreli, yalnız senin hesabın çözer). Windows'ta ortam değişkenleri `set "AD=deger"` ile bir `.cmd` dosyasında verilir; `kur.ps1`'in ürettiği `claude-sansursuz.cmd` dosyasına bakabilirsin.
+
 Aşağıdaki örneklerde anahtar hep bu depodan okunuyor; hiçbir ayar dosyasında anahtarın kendisi yok.
 
 ## 1. Claude Code

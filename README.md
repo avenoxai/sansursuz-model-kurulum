@@ -6,6 +6,8 @@ Anahtarın hiçbir ayar dosyasına yazılmaz. macOS'ta Keychain'e, Linux'ta sist
 
 ## Kurulum
 
+### macOS ve Linux
+
 ```bash
 git clone https://github.com/avenoxai/sansursuz-model-kurulum.git
 cd sansursuz-model-kurulum
@@ -18,14 +20,26 @@ cp .env.example .env
 ./kur.sh
 ```
 
-`.env` oluşturmak istemezsen doğrudan `./kur.sh` çalıştır, anahtarı gizli olarak sorar.
+### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/avenoxai/sansursuz-model-kurulum.git
+cd sansursuz-model-kurulum
+copy .env.example .env
+notepad .env
+powershell -ExecutionPolicy Bypass -File .\kur.ps1
+```
+
+Windows'ta anahtar, Windows'un kullanıcıya bağlı şifrelemesiyle (DPAPI) saklanır; yalnız senin Windows hesabın çözebilir. Komutlar `%USERPROFILE%\.config\sansursuz\bin` klasörüne `.cmd` olarak kurulur ve bu klasör kullanıcı PATH'ine eklenir, yani hem PowerShell'de hem cmd'de çalışır.
+
+`.env` oluşturmak istemezsen betiği doğrudan çalıştır, anahtarı gizli olarak sorar.
 
 Betik sırasıyla şunları yapar:
 
 1. Anahtarı sağlayıcıya sorup doğrular (yanlış anahtarı kaydetmez).
 2. Güvenli depoya koyar, geri okuyarak kontrol eder, `.env`'deki değeri siler.
 3. Bilgisayarında kurulu olan harness'ları bulur ve ayarlar (değiştirdiği her dosyanın yedeğini alır).
-4. `~/.zshrc` / `~/.bashrc` içine tek satırlık bir blok ekler.
+4. macOS/Linux'ta `~/.zshrc` / `~/.bashrc` içine tek satırlık bir blok ekler; Windows'ta komut klasörünü PATH'e ekler.
 5. Her harness'a tek kelimelik bir deneme çağrısı atar ve sonucu gösterir.
 
 Bittiğinde yeni bir terminal aç. Komutlar:
@@ -37,7 +51,7 @@ Bittiğinde yeni bir terminal aç. Komutlar:
 | OpenCode | `opencode-sansursuz` |
 | DeepSeek Harness | uygulamada model seçiciden; anahtarı bir kez uygulamanın Models sayfasına gir |
 
-Kaldırmak için: `./kaldir.sh`
+Kaldırmak için: `./kaldir.sh` (Windows: `powershell -ExecutionPolicy Bypass -File .\kaldir.ps1`)
 
 ## Sağlayıcılar
 
@@ -67,8 +81,13 @@ Bu repoyu Claude Code, omp ya da Codex ile açıp "bunu kur" diyebilirsin; talim
 
 ## Destek
 
-- macOS ve Linux. Windows'ta WSL içinde çalıştır.
-- Gerekenler: `bash`, `curl`, `python3`.
+| Sistem | Betik | Anahtar deposu | Gerekenler |
+|---|---|---|---|
+| macOS | `kur.sh` | Keychain | `bash`, `curl`, `python3` |
+| Linux | `kur.sh` | secret-tool (yoksa yalnız senin okuyabildiğin dosya, izin 600) | `bash`, `curl`, `python3` |
+| Windows | `kur.ps1` | DPAPI ile şifreli dosya | PowerShell 5.1 ya da 7 |
+
+WSL kullanıyorsan WSL içinde `kur.sh` çalıştır.
 - Bu repo sağlayıcılarla bağlantılı değildir.
 
 Lisans: MIT
